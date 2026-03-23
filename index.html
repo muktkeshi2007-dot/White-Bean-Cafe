@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>White Bean Café | Pure Brews. Simple Pleasures.</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         /* --- BRAND COLORS & BASE STYLES --- */
         :root {
@@ -22,7 +24,7 @@
             background-color: var(--ivory);
             color: var(--espresso);
             line-height: 1.6;
-            padding-bottom: 100px; /* Space for sticky order bar */
+            padding-bottom: 100px;
         }
 
         /* --- HEADER & NAVIGATION --- */
@@ -48,17 +50,10 @@
             z-index: 1000;
         }
 
-        .logo { font-size: 1.4rem; font-weight: bold; letter-spacing: 2px; }
+        .logo { font-size: 1.4rem; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
 
         .nav-links { list-style: none; display: flex; gap: 25px; margin: 0; padding: 0; }
-
-        .nav-links a { 
-            color: var(--ivory); 
-            text-decoration: none; 
-            font-size: 0.9rem; 
-            transition: color 0.3s;
-        }
-
+        .nav-links a { color: var(--ivory); text-decoration: none; font-size: 0.9rem; transition: color 0.3s; }
         .nav-links a:hover { color: var(--beige); }
 
         .hero { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
@@ -67,17 +62,12 @@
 
         /* --- SECTIONS --- */
         .container { max-width: 1200px; margin: auto; padding: 60px 20px; }
-
         .section-title { text-align: center; margin-bottom: 40px; }
         .section-title h2 { font-size: 2.5rem; color: var(--espresso); }
         .section-title div { width: 50px; height: 3px; background: var(--beige); margin: 10px auto; }
 
         /* --- MENU GRID & CARDS --- */
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-        }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; }
 
         .category-header {
             grid-column: 1 / -1;
@@ -95,63 +85,24 @@
             border-radius: 8px;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Clips image corners */
+            overflow: hidden;
             transition: transform 0.3s, box-shadow 0.3s;
         }
 
-        .menu-card:hover { 
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px var(--shadow);
-        }
+        .menu-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px var(--shadow); }
 
-        /* New Image Styles */
-        .menu-img-container {
-            width: 100%;
-            height: 200px;
-            overflow: hidden;
-            border-bottom: 1px solid var(--beige);
-        }
+        .menu-img-container { width: 100%; height: 200px; overflow: hidden; border-bottom: 1px solid var(--beige); }
+        .menu-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+        .menu-card:hover .menu-img { transform: scale(1.1); }
 
-        .menu-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.5s ease;
-        }
-
-        .menu-card:hover .menu-img {
-            transform: scale(1.1);
-        }
-
-        .menu-text {
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-        }
-
+        .menu-text { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
         .menu-card h3 { margin: 0 0 10px 0; font-size: 1.2rem; }
         .menu-card p { font-size: 0.9rem; color: #6d4c41; margin-bottom: 15px; flex-grow: 1; }
         
-        .card-footer { 
-            padding: 0 20px 20px 20px;
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-
+        .card-footer { padding: 0 20px 20px 20px; display: flex; justify-content: space-between; align-items: center; }
         .price { font-weight: bold; font-size: 1.1rem; }
 
-        .btn-add {
-            background: var(--espresso);
-            color: var(--white);
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
+        .btn-add { background: var(--espresso); color: var(--white); border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; transition: background 0.3s; }
         .btn-add:hover { background: #5d4037; }
 
         /* --- FOOTER --- */
@@ -190,7 +141,12 @@
             font-weight: bold;
             border-radius: 30px;
             cursor: pointer;
+            transition: background 0.3s;
         }
+        
+        .checkout-btn:hover { background: #219653; }
+        
+        .loading-text { text-align: center; width: 100%; padding: 40px; color: var(--espresso); font-style: italic; }
     </style>
 </head>
 <body>
@@ -231,7 +187,8 @@
             <div></div>
         </div>
         <div id="menu-grid" class="menu-grid">
-            </div>
+            <div class="loading-text">Loading fresh menu items from the database...</div>
+        </div>
     </section>
 
     <footer id="locations">
@@ -268,30 +225,53 @@
         <div class="order-info">
             Items: <b id="cart-count">0</b> | Total: <b id="total-price">$0.00</b>
         </div>
-        <button class="checkout-btn" onclick="checkout()">Place Order</button>
+        <button class="checkout-btn" onclick="checkout()" id="checkout-button">Place Order</button>
     </div>
 
     <script>
-        const menuData = [
-            { cat: "Signature Coffee & Brews", name: "The White Bean Latte", price: 5.50, desc: "Smooth blonde roast espresso, oat milk, white chocolate, vanilla.", img: "https://images.unsplash.com/photo-1570968015849-df41ffcad431?auto=format&fit=crop&w=500&q=80" },
-            { cat: "Signature Coffee & Brews", name: "Classic Aeropress", price: 4.75, desc: "A clean, crisp cup of single-origin coffee for the purist.", img: "https://images.unsplash.com/photo-1512568400610-62da28bc8a13?auto=format&fit=crop&w=500&q=80" },
-            { cat: "Signature Coffee & Brews", name: "Cloud Cold Brew", price: 6.00, desc: "18-hour slow-steeped coffee topped with salty-sweet cold foam.", img: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=500&q=80" },
-            { cat: "Signature Coffee & Brews", name: "Honey Lavender Cappuccino", price: 5.75, desc: "Double shot of espresso with floral lavender syrup and local honey.", img: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=500&q=80" },
-            
-            { cat: "Non-Coffee Refreshers", name: "Ceremonial Matcha Latte", price: 6.50, desc: "Premium grade Japanese matcha whisked with your choice of milk.", img: "https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=500&q=80" },
-            { cat: "Non-Coffee Refreshers", name: "White Peach Iced Tea", price: 4.50, desc: "Black tea infused with fresh white peach purée and mint.", img: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=500&q=80" },
-            
-            { cat: "All-Day Breakfast & Brunch", name: "Truffle Mushroom Toast", price: 13.50, desc: "Sautéed wild mushrooms on toasted sourdough with truffle oil.", img: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=500&q=80" },
-            { cat: "All-Day Breakfast & Brunch", name: "The White Bean Bowl", price: 14.00, desc: "White cannellini beans, poached eggs, kale, and avocado.", img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=500&q=80" },
-            
-            { cat: "Sweets & Bakery", name: "Sea Salt Brownie", price: 4.25, desc: "Rich, dark chocolate brownie with a sprinkle of Maldon sea salt.", img: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=500&q=80" },
-            { cat: "Sweets & Bakery", name: "Pistachio Rose Cake", price: 7.25, desc: "Delicate sponge cake with crushed pistachios and rosewater icing.", img: "https://images.unsplash.com/photo-1519340333755-5672c2393a81?auto=format&fit=crop&w=500&q=80" }
-        ];
+        // 1. Initialize Supabase
+        const { createClient } = supabase;
+        
+        // --- IMPORTANT: REPLACE THESE TWO STRINGS WITH YOUR SUPABASE CREDENTIALS ---
+        const supabaseUrl = 'https://xemspctzkwxeiiniwtfz.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbXNwY3R6a3d4ZWlpbml3dGZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxOTU4MTQsImV4cCI6MjA4OTc3MTgxNH0.mBnWUxZAtciR6D6PjE63l8eO7cEYDwGQqram769A3mA';
+        // ---------------------------------------------------------------------------
+        
+        const _supabase = createClient(supabaseUrl, supabaseKey);
 
+        let menuData = [];
         let cart = [];
+
+        // 2. Fetch data from Supabase instead of using a hardcoded array
+        async function fetchMenu() {
+            try {
+                const { data, error } = await _supabase
+                    .from('menu_items')
+                    .select('*')
+                    .order('id');
+
+                if (error) throw error;
+
+                // Map database columns to match the existing frontend structure
+                menuData = data.map(item => ({
+                    id: item.id,
+                    cat: item.category,
+                    name: item.name,
+                    price: parseFloat(item.price),
+                    desc: item.description,
+                    img: item.image_url
+                }));
+
+                renderMenu();
+            } catch (error) {
+                console.error("Error fetching menu:", error.message);
+                document.getElementById('menu-grid').innerHTML = `<div class="loading-text">Failed to load menu. Please refresh the page.</div>`;
+            }
+        }
 
         function renderMenu() {
             const grid = document.getElementById('menu-grid');
+            grid.innerHTML = ''; // Clear loading text
             let currentCat = "";
             
             menuData.forEach((item, index) => {
@@ -329,15 +309,42 @@
             document.getElementById('total-price').innerText = `$${total.toFixed(2)}`;
         }
 
-        function checkout() {
+        // 3. Save the order to Supabase on checkout
+        async function checkout() {
             if (cart.length === 0) return alert("Your cart is empty!");
+            
+            const btn = document.getElementById('checkout-button');
+            btn.innerText = 'Processing...';
+            btn.disabled = true;
+
             const total = cart.reduce((sum, item) => sum + item.price, 0);
-            alert(`☕ Order Received!\nTotal: $${total.toFixed(2)}\n\nSee you at 123 Serenity Lane!`);
-            cart = [];
-            updateBar();
+            
+            try {
+                const { error } = await _supabase
+                    .from('orders')
+                    .insert([
+                        { 
+                            total_price: total, 
+                            items: cart 
+                        }
+                    ]);
+
+                if (error) throw error;
+
+                alert(`☕ Order Received & Saved to Database!\nTotal: $${total.toFixed(2)}\n\nSee you at 123 Serenity Lane, Muktkeshi!`);
+                cart = [];
+                updateBar();
+            } catch (error) {
+                console.error("Checkout error:", error.message);
+                alert("There was an issue processing your order. Please try again.");
+            } finally {
+                btn.innerText = 'Place Order';
+                btn.disabled = false;
+            }
         }
 
-        window.onload = renderMenu;
+        // Run fetchMenu when the page loads
+        window.onload = fetchMenu;
     </script>
 </body>
 </html>
